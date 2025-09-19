@@ -180,6 +180,45 @@ test = [
 
 
 """
+Notes:
+
+I know that this problem requires knowing topological sort,
+but I wanted to come to the efficient solution myself. After
+learning about Kahn's algorithm, it looks like the solution
+is similar to what I came up with in the end. I utilized the
+fact that nodes that have no dependencies are nodes that
+we want to resolve others to, so whenever we resolve a node
+completely to non-dependent node, it means that that node is
+resolved as well. we can continue this recursively until the
+nodes set is empty.
+
+For Kahn's algorithm, the process is similar, but instead
+the focus reversed: choosing nodes that have no incoming
+edges (nodes that have dependencies but are not dependent on
+others). This approach is more "bottom-up", and resolves by
+returning a sorted list that allows us to take the actions
+in the appropriate order.
+
+Kahn's algorithm:
+L ← Empty list that will contain the sorted elements
+S ← Set of all nodes with no incoming edge
+
+while S is not empty do
+    remove a node n from S
+    add n to L
+    for each node m with an edge e from n to m do
+        remove edge e from the graph
+        if m has no other incoming edges then
+            insert m into S
+
+if graph has edges then
+    return error   (graph has at least one cycle)
+else
+    return L   (a topologically sorted order)
+
+"""
+
+"""
 GRAVEYARD
 
 def can_finish(courses, prereqs):
