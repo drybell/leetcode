@@ -124,6 +124,161 @@ track of traversed nodes during a dependency sweep
 
 def can_finish(courses, prereqs):
     stacks = [[] for _ in range(courses)]
+    nodes  = set()
+
+    for class_to_take, prereq in prereqs:
+        if prereq == class_to_take:
+            return False
+
+        stacks[class_to_take].insert(0, prereq)
+        nodes.add(class_to_take)
+
+    if len(nodes) == courses:
+        return False
+
+    def traverse(node, curr):
+        if node not in nodes:
+            return True
+
+        if node in curr:
+            return False
+
+        curr.insert(0, node)
+
+        for new in stacks[node]:
+            if not traverse(new, curr):
+                return False
+
+            nodes.discard(new)
+
+            if curr:
+                curr.pop(-1)
+
+        nodes.discard(node)
+
+        return True
+
+    for i in range(courses):
+        if i not in nodes:
+            continue
+
+        if not traverse(i, []):
+            return False
+
+    return True
+
+test = [
+    can_finish(2, [[1,0]])
+    , can_finish(2, [[1,0], [0,1]])
+    , can_finish(20, [[0,10],[3,18],[5,5],[6,11],[11,14],[13,1],[15,1],[17,4]])
+    , can_finish(3, [[1,0],[1,2],[0,1]])
+    , can_finish(5, [[1,4],[2,4],[3,1],[3,2]])
+    , can_finish(4, [[0,1],[3,1],[1,3],[3,2]])
+    , can_finish(100, [[6,27],[83,9],[10,95],[48,67],[5,71],[18,72],[7,10],[92,4],[68,84],[6,41],[82,41],[18,54],[0,2],[1,2],[8,65],[47,85],[39,51],[13,78],[77,50],[70,56],[5,61],[26,56],[18,19],[35,49],[79,53],[40,22],[8,19],[60,56],[48,50],[20,70],[35,12],[99,85],[12,75],[2,36],[36,22],[21,15],[98,1],[34,94],[25,41],[65,17],[1,56],[43,96],[74,57],[19,62],[62,78],[50,86],[46,22],[10,13],[47,18],[20,66],[83,66],[51,47],[23,66],[87,42],[25,81],[60,81],[25,93],[35,89],[65,92],[87,39],[12,43],[75,73],[28,96],[47,55],[18,11],[29,58],[78,61],[62,75],[60,77],[13,46],[97,92],[4,64],[91,47],[58,66],[72,74],[28,17],[29,98],[53,66],[37,5],[38,12],[44,98],[24,31],[68,23],[86,52],[79,49],[32,25],[90,18],[16,57],[60,74],[81,73],[26,10],[54,26],[57,58],[46,47],[66,54],[52,25],[62,91],[6,72],[81,72],[50,35],[59,87],[21,3],[4,92],[70,12],[48,4],[9,23],[52,55],[43,59],[49,26],[25,90],[52,0],[55,8],[7,23],[97,41],[0,40],[69,47],[73,68],[10,6],[47,9],[64,24],[95,93],[79,66],[77,21],[80,69],[85,5],[24,48],[74,31],[80,76],[81,27],[71,94],[47,82],[3,24],[66,61],[52,13],[18,38],[1,35],[32,78],[7,58],[26,58],[64,47],[60,6],[62,5],[5,22],[60,54],[49,40],[11,56],[19,85],[65,58],[88,44],[86,58]])
+    , can_finish(7, [[1,0],[0,3],[0,2],[3,2],[2,5],[4,5],[5,6],[2,4]])
+]
+
+
+"""
+GRAVEYARD
+
+def can_finish(courses, prereqs):
+    print()
+    stacks = [[] for _ in range(courses)]
+
+    for class_to_take, prereq in prereqs:
+        stacks[class_to_take].insert(0, prereq)
+
+    print(stacks)
+
+    # if all class nodes require dependencies, then we can
+    # immediately exit early since there will have to be loops
+    if all(map(len, stacks)):
+        return False
+
+    def traverse(node, origin, seen):
+        print(f"start {node} {origin}")
+        if node in seen:
+            print(f'{node} in {seen}')
+            return True
+
+        if seen and origin and stacks[node] == origin:
+            print(f'{stacks[node]} = {origin}')
+            return False
+
+        seen.append(node)
+
+        for new_node in stacks[node]:
+            print(f'traverse {new_node} -> {stacks[new_node]}')
+            if not traverse(new_node, origin, seen):
+                return False
+
+        print(f"final {seen}")
+
+        return True
+
+    for i in range(courses):
+        seen = []
+
+        if i in stacks[i]:
+            return False
+
+        if not traverse(i, stacks[i], seen):
+            return False
+
+    return True
+
+def can_finish(courses, prereqs):
+    stacks = [[] for _ in range(courses)]
+
+    for class_to_take, prereq in prereqs:
+        stacks[class_to_take].insert(0, prereq)
+
+    print()
+    print(stacks)
+
+    # if all class nodes require dependencies, then we can
+    # immediately exit early since there will have to be loops
+    if all(map(len, stacks)):
+        return False
+
+    seen = []
+
+    def traverse(node, origin):
+        print(node, origin, seen)
+
+        if node in seen:
+            print(f"{node} in {seen}")
+            return False
+
+        seen.append(node)
+
+        if origin and stacks[node] == origin:
+            print(f"{node} == {origin}")
+            return False
+
+        for newnode in stacks[node]:
+            print(f"traverse {newnode} -> {stacks[newnode]}")
+            if not traverse(newnode, origin):
+                return False
+
+        print(f"final {node} {seen}")
+
+        return True
+
+    for i in range(courses):
+        if i in seen:
+            continue
+
+        for node in stacks[i]:
+            if not traverse(node, stacks[i]):
+                return False
+
+    return True
+
+TLE:
+def can_finish(courses, prereqs):
+    stacks = [[] for _ in range(courses)]
 
     for class_to_take, prereq in prereqs:
         stacks[class_to_take].insert(0, prereq)
@@ -133,20 +288,30 @@ def can_finish(courses, prereqs):
     if all(map(len, stacks)):
         return False
 
-    while not all(map(len, stacks)):
-        for i, stack in enumerate(stacks):
-            if not stack:
-                continue
+    seen = []
 
-            while stack:
-                dep = stack.pop(0)
+    def traverse(node, origin):
+        if i in seen:
+            return True
 
+        seen.append(node)
 
+        if stacks[node] == origin:
+            return False
 
-    return stacks
+        for newnode in stacks[node]:
+            if not traverse(newnode, origin):
+                return False
 
-test = [
-    can_finish(2, [[1,0]])
-    , can_finish(2, [[1,0], [0,1]])
-]
+        return True
 
+    for i in range(courses):
+        if i in seen:
+            continue
+
+        for node in stacks[i]:
+            if not traverse(node, stacks[i]):
+                return False
+
+    return True
+"""
