@@ -63,3 +63,18 @@ def linked_list(head):
 
     return root
 
+def executor(cls, ids, args):
+    results = []
+    m = cls(args[0][0])
+
+    print("EXECUTING")
+    print(m)
+
+    for identifier, arg in zip(ids[1:], args[1:]):
+        results.append(getattr(m, identifier)(*arg))
+
+        print(identifier, arg)
+        print(m)
+        print()
+
+    return results, m
