@@ -45,6 +45,12 @@ Recursive branching definitely ended in a TLE, failing on cases
 where there are a lot of star tokens in the pattern
 
 I think trying some sort of DP/Knapsack could work
+
+I first started with collapsing the patterns by removing
+duplicate star tokens from the pattern string to prune the
+search tree, this resulted in a successful pass
+
+At some point I should try the DP approach for practice
 """
 
 class Token:
@@ -54,6 +60,88 @@ class Token:
 
     def __repr__(self):
         return f"{self.token}{'*' if self.star else ''}"
+
+def is_match(s, p):
+    patterns = []
+
+    last = -1
+
+    for pattern in p:
+        match pattern:
+            case '*':
+                patterns[-1].star = True
+                if last > 0:
+                    prev_token = patterns[last - 1]
+                    if (
+                        prev_token.star
+                        and prev_token.token == patterns[-1].token
+                    ):
+                        patterns.pop()
+                        last -= 1
+            case _:
+                patterns.append(Token(pattern))
+                last += 1
+
+    result = [None]
+
+    def traverse(pat_i, str_i):
+        if result[0] is not None:
+            return result[0]
+
+        if str_i == len(s):
+            if pat_i == len(patterns):
+                result[0] = True
+                return True
+
+            while pat_i < len(patterns):
+                if patterns[pat_i].star:
+                    pat_i += 1
+                else:
+                    return False
+
+            result[0] = True
+            return True
+        elif pat_i >= len(patterns):
+            return False
+        elif str_i > len(s):
+            return False
+
+        pattern = patterns[pat_i]
+        letter  = s[str_i]
+
+        if pattern.token != '.' and letter != pattern.token:
+            if pattern.star:
+                return traverse(pat_i + 1, str_i)
+
+            return False
+        else: # letter == pattern.token
+            if pattern.star:
+                return [
+                    traverse(pat_i + 1, str_i + 1)
+                    , traverse(pat_i, str_i + 1)
+                    , traverse(pat_i + 1, str_i)
+                ]
+
+            return traverse(pat_i + 1, str_i + 1)
+
+    traverse(0, 0)
+    return result[0] is not None
+
+test = [
+    is_match('aab', 'c*a*b') # True
+    , is_match('aaa', 'a*a') # True
+    , is_match('aaa', 'ab*a*c*a') # True
+    , is_match('abcd', 'd*') # False
+    , is_match('bbbbbbc', 'b*c') # True
+    , is_match('aaaaabdce', '.*d.e') # True
+    , is_match("mississippi", "mis*is*p*.") # False
+    , is_match("mississippi", "mis*is*ip*.") # True
+    , is_match("aaaaaaaaaaaaab", "a*a*a*a*a*a*a*a*a*c")
+]
+
+
+"""
+GRAVEYARD
 
 def is_match(s, p):
     patterns = []
@@ -110,13 +198,5 @@ def is_match(s, p):
     traverse(0, 0)
     return result[0] is not None
 
-test = [
-    is_match('aab', 'c*a*b') # True
-    , is_match('aaa', 'a*a') # True
-    , is_match('aaa', 'ab*a*c*a') # True
-    , is_match('abcd', 'd*') # False
-    , is_match('bbbbbbc', 'b*c') # True
-    , is_match('aaaaabdce', '.*d.e') # True
-    , is_match("mississippi", "mis*is*p*.") # False
-    , is_match("mississippi", "mis*is*ip*.") # True
-]
+
+"""
