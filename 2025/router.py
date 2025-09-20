@@ -84,6 +84,9 @@ I might try just using the deque and utilizing constant append/pop to find the c
 
 This approach also resulted in TLE. I'll have to figure out
 an efficient way to store time boundaries so we can count quickly
+
+Trying a minheap also results in TLE as we spend too long
+rebuilding the heap after popping
 """
 
 from utils import executor
@@ -204,15 +207,41 @@ class ManagerV2:
 
         return ctr
 
-class Manager:
+import heapq
+
+GARBAGE_TS = 10**9 + 1
+
+class ManagerV3:
     def __init__(self, limit):
         self.q = deque([], limit)
         self.size = 0
 
+        self.counts = {}
+
+    def pop_from_heap(self, psrc, pdst, pts):
+        cache = []
+        while self.counts[pdst]:
+            popped = heapq.heappop(self.counts[pdst])
+            if popped == [pts, psrc]:
+                break
+            else:
+                cache.insert(0, popped)
+
+        while cache:
+            heapq.heappush(self.counts[pdst], cache.pop(0))
+
+    def add_to_heap(self, src, dst, ts):
+        if self.counts.get(dst) is None:
+            self.counts[dst] = [[ts, src]]
+        else:
+            heapq.heappush(self.counts[dst], [ts, src])
+
     def pop(self):
         self.size -= 1
-        psrc, pdest, pts = self.q.popleft()
-        return [psrc, pdest, pts]
+        popped = self.q.popleft()
+
+        self.pop_from_heap(*popped)
+        return popped
 
     def add(self, source, dest, ts):
         newpacket = [source, dest, ts]
@@ -224,6 +253,9 @@ class Manager:
 
         self.q.append(newpacket)
         self.size += 1
+
+        self.add_to_heap(*newpacket)
+
         return True
 
     def forward(self):
@@ -233,19 +265,93 @@ class Manager:
         return self.pop()
 
     def count(self, dest, start, end):
-        cloned = self.q.copy()
+        if self.counts.get(dest) is None:
+            return 0
+
         ctr = 0
+
+        cloned = list(self.counts[dest])
         while cloned:
-            _, pdest, ts = cloned.popleft()
-            if pdest != dest:
+            [ts, src] = heapq.heappop(cloned)
+
+            if ts < start:
                 continue
-            else:
-                if start <= ts <= end:
-                    ctr += 1
+            if start <= ts <= end:
+                ctr += 1
+            if ts > end:
+                break
 
         return ctr
 
+class Manager:
+    def __init__(self, limit):
+        self.q = deque([], limit)
+        self.size = 0
 
+    def pop_from_heap(self, psrc, pdst, pts):
+        cache = []
+        while self.counts[pdst]:
+            popped = heapq.heappop(self.counts[pdst])
+            if popped == [pts, psrc]:
+                break
+            else:
+                cache.insert(0, popped)
+
+        while cache:
+            heapq.heappush(self.counts[pdst], cache.pop(0))
+
+    def add_to_heap(self, src, dst, ts):
+        if self.counts.get(dst) is None:
+            self.counts[dst] = [[ts, src]]
+        else:
+            heapq.heappush(self.counts[dst], [ts, src])
+
+    def pop(self):
+        self.size -= 1
+        popped = self.q.popleft()
+
+        self.pop_from_heap(*popped)
+        return popped
+
+    def add(self, source, dest, ts):
+        newpacket = [source, dest, ts]
+        if newpacket in self.q:
+            return False
+
+        if self.size == self.q.maxlen:
+            self.pop()
+
+        self.q.append(newpacket)
+        self.size += 1
+
+        self.add_to_heap(*newpacket)
+
+        return True
+
+    def forward(self):
+        if not self.q:
+            return []
+
+        return self.pop()
+
+    def count(self, dest, start, end):
+        if self.counts.get(dest) is None:
+            return 0
+
+        ctr = 0
+
+        cloned = list(self.counts[dest])
+        while cloned:
+            [ts, src] = heapq.heappop(cloned)
+
+            if ts < start:
+                continue
+            if start <= ts <= end:
+                ctr += 1
+            if ts > end:
+                break
+
+        return ctr
 
 class Router:
 
@@ -314,5 +420,10 @@ test = [
         Router
         , ["Router","addPacket","addPacket","addPacket","getCount","getCount","addPacket","forwardPacket","addPacket"]
         , [[5],[2,3,1],[5,2,5],[2,3,5],[3,4,4],[3,5,5],[3,2,5],[],[2,3,5]]
+    )
+    , executor(
+        Router
+        , ["Router","addPacket","getCount","addPacket","addPacket","getCount","addPacket","addPacket","getCount","addPacket","forwardPacket","addPacket","getCount","addPacket","forwardPacket","addPacket","addPacket","getCount","getCount","getCount","getCount","getCount","getCount","addPacket","addPacket","getCount","addPacket","addPacket","addPacket","forwardPacket","addPacket","forwardPacket","getCount","addPacket","addPacket","forwardPacket","addPacket","addPacket","addPacket","getCount","forwardPacket","getCount","forwardPacket","forwardPacket","getCount","addPacket","addPacket","getCount","getCount","forwardPacket","addPacket","getCount","addPacket","forwardPacket","getCount","addPacket","addPacket","addPacket","addPacket","forwardPacket","getCount","addPacket","addPacket","getCount","getCount","forwardPacket","forwardPacket","forwardPacket","getCount","addPacket","addPacket","addPacket","getCount","forwardPacket","addPacket","addPacket","getCount","addPacket","forwardPacket","forwardPacket","addPacket","getCount","addPacket","addPacket","addPacket","forwardPacket","addPacket","getCount","getCount","addPacket","forwardPacket","forwardPacket","forwardPacket","forwardPacket","addPacket","addPacket","forwardPacket","getCount","getCount","addPacket"]
+        , [[49],[4,1,1],[1,1,1],[2,3,1],[3,1,2],[1,1,1],[1,4,2],[2,4,2],[3,2,2],[2,1,2],[],[2,3,2],[3,1,1],[4,5,2],[],[1,4,2],[3,2,7],[1,7,7],[4,3,7],[5,1,1],[1,5,6],[3,6,7],[3,4,4],[3,4,11],[2,5,11],[5,6,9],[1,3,14],[2,4,14],[3,2,16],[],[2,1,16],[],[5,8,8],[3,2,16],[1,2,16],[],[4,2,16],[2,4,16],[2,3,16],[3,10,12],[],[5,11,13],[],[],[5,7,13],[1,4,16],[4,5,16],[1,5,8],[5,15,15],[],[5,3,16],[3,16,16],[5,4,16],[],[1,5,15],[2,1,20],[2,5,20],[5,4,20],[2,3,23],[],[2,10,17],[1,5,23],[5,4,23],[1,16,18],[4,9,22],[],[],[],[4,1,15],[2,3,23],[1,4,24],[2,5,24],[4,3,17],[],[2,1,28],[4,1,28],[2,6,18],[1,2,28],[],[],[2,3,33],[2,22,26],[5,3,33],[4,5,33],[5,4,33],[],[5,1,33],[1,30,31],[5,13,16],[2,5,34],[],[],[],[],[3,2,38],[3,4,38],[],[3,5,13],[1,36,38],[3,4,38]]
     )
 ]
