@@ -210,6 +210,7 @@ class ManagerV2:
 import heapq
 
 GARBAGE_TS = 10**9 + 1
+MAX_SOURCE = (2 * 10**5) + 1
 
 class ManagerV3:
     def __init__(self, limit):
@@ -288,34 +289,35 @@ class Manager:
         self.q = deque([], limit)
         self.size = 0
 
-    def pop_from_heap(self, psrc, pdst, pts):
-        cache = []
-        while self.counts[pdst]:
-            popped = heapq.heappop(self.counts[pdst])
-            if popped == [pts, psrc]:
-                break
-            else:
-                cache.insert(0, popped)
+        self.counts = {}
+        self.dests  = {}
 
-        while cache:
-            heapq.heappush(self.counts[pdst], cache.pop(0))
-
-    def add_to_heap(self, src, dst, ts):
-        if self.counts.get(dst) is None:
-            self.counts[dst] = [[ts, src]]
+    def add_to_dest(self, src, dst, ts):
+        if self.counts.get(dst) is not None:
+            self.counts[dst][(ts, src)] = 1
         else:
-            heapq.heappush(self.counts[dst], [ts, src])
+            self.counts[dst] = {(ts, src): 1}
+
+        if self.dests.get(dst) is not None:
+            self.dests[dst].append(ts)
+        else:
+            self.dests[dst] = deque([ts])
+
+    def pop_from_dest(self, src, dst, ts):
+        self.counts[dst].pop((ts, src), None)
+        self.dests[dst].popleft()
 
     def pop(self):
         self.size -= 1
         popped = self.q.popleft()
 
-        self.pop_from_heap(*popped)
+        self.pop_from_dest(*popped)
         return popped
 
     def add(self, source, dest, ts):
         newpacket = [source, dest, ts]
-        if newpacket in self.q:
+
+        if self.counts.get(dest, {}).get((ts, source)) is not None:
             return False
 
         if self.size == self.q.maxlen:
@@ -324,7 +326,7 @@ class Manager:
         self.q.append(newpacket)
         self.size += 1
 
-        self.add_to_heap(*newpacket)
+        self.add_to_dest(*newpacket)
 
         return True
 
@@ -335,23 +337,18 @@ class Manager:
         return self.pop()
 
     def count(self, dest, start, end):
-        if self.counts.get(dest) is None:
+        data = self.dests.get(dest)
+        if data is None:
             return 0
 
-        ctr = 0
-
-        cloned = list(self.counts[dest])
-        while cloned:
-            [ts, src] = heapq.heappop(cloned)
-
-            if ts < start:
-                continue
-            if start <= ts <= end:
-                ctr += 1
-            if ts > end:
-                break
-
-        return ctr
+        return (
+            bisect.bisect_right(data, end)
+            - bisect.bisect_left(data, start)
+        )
+        #return len([
+        #    t for _, t in data.keys()
+        #    if start <= t <= end
+        #])
 
 class Router:
 
