@@ -65,7 +65,7 @@ def linked_list(head):
 
 def executor(cls, ids, args):
     results = []
-    m = cls(args[0][0])
+    m = cls(*args[0])
 
     print("EXECUTING")
     print(m)
