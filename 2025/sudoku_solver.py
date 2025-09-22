@@ -21,7 +21,24 @@ Output: [["5","3","4","6","7","8","9","1","2"],["6","7","2","1","9","5","3","4",
 
 from functools import reduce
 
-opts = set([str(i) for i in range(1, 10)])
+import numpy as np
+
+def convert_to_mat(board):
+    return np.array([
+        [int(i) if i != '.' else -1 for i in row]
+        for row in board
+    ])
+
+numbers = list(range(1, 10))
+opts = set([str(i) for i in numbers])
+
+square_idxs = [
+      (0, 0), (0, 3), (0, 6)
+    , (3, 0), (3, 3), (3, 6)
+    , (6, 0), (6, 3), (6, 6)
+]
+
+square_ids = list(range(0, 9))
 
 def handler(base, as_set=True):
     return base if not as_set else set(base)
@@ -130,12 +147,6 @@ def solve_simple(board, cache, init=True):
         init = False
 
 def get_best_square(board):
-    square_idxs = [
-          (0, 0), (0, 3), (0, 6)
-        , (3, 0), (3, 3), (3, 6)
-        , (6, 0), (6, 3), (6, 6)
-    ]
-
     squares = [
         get_square_indexes(
             board, *square_idx, keep=True
@@ -199,17 +210,175 @@ def solve_with_guess(board, cache):
             else:
                 return result
 
+def get_occupied_squares(idxs):
+    return [
+        square_idxs.index((
+            get_bounds(x), get_bounds(y)
+        ))
+        for x, y in idxs
+    ]
+
+def find_possible_pairs(squares, left, right):
+    opts  = []
+
+    for square in squares:
+        ic,   jc   = square_idxs[square]
+        imax, jmax = ic + 2, jc + 2
+        opt = None
+
+        for i, ileft in enumerate(left):
+            for j, jright in enumerate(right):
+                if ic <= ileft <= imax and jc <= jright <= jmax:
+                    opts.append([square, (ileft, jright)])
+
+    return opts
+
+def find_unique_pairs(target, squares, l, r, board):
+    opts  = []
+
+    def traverse(left, right, square, temp):
+        if len(temp) == target:
+            opts.append(temp)
+            return
+
+        ic,   jc   = square_idxs[squares[square]]
+        imax, jmax = ic + 2, jc + 2
+
+        for i, ileft in enumerate(left):
+            for j, jright in enumerate(right):
+                if board[ileft][jright] != -1:
+                    continue
+
+                if ic <= ileft <= imax and jc <= jright <= jmax:
+                    l = list(left)
+                    l.pop(i)
+
+                    r = list(right)
+                    r.pop(j)
+
+                    traverse(
+                        l, r
+                        , square + 1
+                        , [*temp, (ileft, jright)]
+                    )
+
+    traverse(l, r, 0, [])
+
+    return opts
+
+def possible_indexes(board, num):
+    if isinstance(board, list):
+        board = convert_to_mat(board)
+
+    idxs = np.argwhere(board == num)
+    occupied = get_occupied_squares(idxs)
+
+    squares = list(set(square_ids).difference(set(occupied)))
+    left    = list(set(square_ids).difference(set(idxs[:, 0])))
+    right   = list(set(square_ids).difference(set(idxs[:, 1])))
+
+    opts = find_unique_pairs(9 - len(idxs), squares, left, right, board)
+    converted_idxs = [tuple(idx.tolist()) for idx in idxs]
+
+    return [
+        [*converted_idxs, *opt]
+        for opt in opts
+    ]
+
+def set_board_with_num(board, num, idxs):
+    cloned = [list(b) for b in board]
+    for x, y in idxs:
+        cloned[x][y] = str(num)
+
+    return cloned
+
+def combine_pairs(idxs1, idxs2):
+    return [
+        (idx1, idx2)
+        for i, idx1 in enumerate(idxs1)
+        for j, idx2 in enumerate(idxs2)
+        if not set(idx2).intersection(set(idx1))
+    ]
+
+def filter_pair_by_subset(subset, pairs):
+    return [
+        pair
+        for pair in pairs
+        if all(
+            not set(pair).intersection(s)
+            for s in subset
+        )
+    ]
+
+def filter_pair_by_set(s, pairs):
+    res = []
+    for subset in s:
+        test = filter_pair_by_subset(subset, pairs)
+        if test:
+            res.extend(
+                [*subset, pair]
+                for pair in test
+            )
+
+    return res
+
+def get_valid_arrangements(board):
+    b = convert_to_mat(board)
+    return [
+        possible_indexes(b, i)
+        for i in range(1, 10)
+    ]
+
+
+def iterate_boards(board, iters, exclude):
+    if iters > 100:
+        return board
+    if is_solved(board):
+        return board
+
+    arrs = get_valid_arrangements(board)
+    lengths = list(map(len, arrs))
+
+    best = np.argsort(lengths)
+
+    print(exclude)
+    print('\n'.join(str(b) for b in board))
+
+    for num in best:
+        if num + 1 in exclude:
+            continue
+        if not arrs[num]:
+            continue
+        if len(arrs[num]) > 50:
+            continue
+
+        for idxs in arrs[num]:
+            res = iterate_boards(
+                set_board_with_num(board, num + 1, idxs)
+                , iters + 1
+                , [*exclude, num + 1]
+            )
+
+            if res:
+                return res
+
+    return False
+
+def solve_by_unique(board, iters):
+    if iters > 1000:
+        return board
+
+    for b in iterate_boards(board):
+        if not is_solved(b):
+            return solve_by_unique(b, iters + 1)
+        else:
+            return b
+
 def solve(board):
     cache = [[None] * 9 for _ in range(9)]
 
     solve_simple(board, cache)
-    newcache, newboard = solve_with_guess(board, cache)
-
-    for i, row in enumerate(newboard):
-        for j, val in enumerate(row):
-            board[i][j] = val
-
-    return newcache, newboard
+    return cache, board
 
 
 test = [
