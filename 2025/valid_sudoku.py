@@ -74,3 +74,25 @@ and using numpy to solve each step
 
 May revisit this to solve without numpy at some point
 """
+
+def check_rows(board):
+    return np.apply_along_axis(is_subarray_unique, 1, board)
+
+def check_cols(board):
+    return np.apply_along_axis(is_subarray_unique, 0, board)
+
+def check_squares(board):
+    return np.array([
+        is_subarray_unique(board[i:i+3, j:j+3].flatten())
+        for i in range(0, 9, 3)
+        for j in range(0, 9, 3)
+    ])
+
+def check_sudoku(board):
+    b = convert_to_mat(board)
+    return [
+        check_rows(b)
+        , check_cols(b)
+        , check_squares(b)
+    ]
+
