@@ -339,6 +339,9 @@ def iterate_boards(board, iters, exclude):
     arrs = get_valid_arrangements(board)
     lengths = list(map(len, arrs))
 
+    if sum(lengths) < 9:
+        return False
+
     best = np.argsort(lengths)
 
     print(exclude)
@@ -363,6 +366,64 @@ def iterate_boards(board, iters, exclude):
                 return res
 
     return False
+
+def get_best_boards(board):
+    exclude = []
+
+    def get_best(b):
+        arrs = get_valid_arrangements(b)
+        lengths = list(map(len, arrs))
+        best = np.argsort(lengths)
+
+        for num in best:
+            if lengths[num] <= 1 or num + 1 in exclude:
+                continue
+
+            exclude.append(num + 1)
+
+            return [
+                set_board_with_num(board, num + 1, idxs)
+                for idxs in arrs[num]
+            ]
+
+    return get_best(board)
+
+    base = get_best(board)
+    layers = []
+    final = []
+
+    for b in base:
+        layers.extend(get_best(b))
+
+    for b in layers:
+        res = get_best(b)
+        if res:
+            final.extend(res)
+
+    return final
+
+
+    return [
+        sub
+        for b in get_best(board)
+        for sub in get_best(b)
+    ]
+
+def simple_solve(board):
+    cloned = [list(b) for b in board]
+    cache = [[None] * 9 for _ in range(9)]
+
+    solve_simple(cloned, cache)
+    return cloned, cache
+
+def solve_then_get_boards(board):
+    res = []
+    board, _ = simple_solve(board)
+    for b in get_best_boards(board):
+        res.append(simple_solve(b)[0])
+
+    return res
+
 
 def solve_by_unique(board, iters):
     if iters > 1000:
