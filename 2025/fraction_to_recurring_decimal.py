@@ -76,7 +76,6 @@ def frac_to_dec(numerator, denominator):
     loop_start = None
 
     i = 1
-    print()
 
     while True:
         alpha_i = (
@@ -96,8 +95,6 @@ def frac_to_dec(numerator, denominator):
         Bs.append(B_i)
 
         cache[d_i] += 1
-
-        print(d_i, r_i, B_i)
 
         if r_i == 0 and i > (k - l) + 1:
             break
@@ -120,10 +117,12 @@ def frac_to_dec(numerator, denominator):
         Bs.insert(2 + k - l, '.')
 
     if loop_start is not None:
-        if Bs.index('.') != len(Bs) - 2:
+        paren_loc = max(Bs.index('.') + 1, loop_start + 1)
+
+        if Bs.index('.') != len(Bs) - 2 and loop_start + 1 >= paren_loc:
             Bs.pop(-1)
 
-        Bs.insert(max(Bs.index('.') + 1, loop_start + 1), '(')
+        Bs.insert(paren_loc, '(')
 
     base_str = ''.join(str(b) for b in Bs)
     integer, _, decimal = base_str.partition('.')
