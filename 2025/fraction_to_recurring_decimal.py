@@ -69,10 +69,10 @@ def frac_to_dec(numerator, denominator):
     qs = [0]
     rs = [int(numstr[:l - 1] or 0)]
     Bs = [0]
+    ds = [0]
 
     cache = defaultdict(start_at_zero)
     is_repeating = False
-    whole_decimal_repeating = False
     loop_start = None
 
     i = 1
@@ -91,56 +91,47 @@ def frac_to_dec(numerator, denominator):
         q_i = 10 * qs[i - 1] + B_i
 
         qs.append(q_i)
+        ds.append(d_i)
         rs.append(r_i)
         Bs.append(B_i)
 
-        cache[r_i] += 1
+        cache[d_i] += 1
 
-        print(r_i, B_i)
+        print(d_i, r_i, B_i)
 
         if r_i == 0 and i > (k - l) + 1:
             break
 
-        if cache[r_i] >= 2 and i > (k - l) + 1:
+        if cache[d_i] >= 2 and i > (k - l) + 1:
             is_repeating = True
 
-            if rs[-2] != rs[-1]:
-                if Bs[rs.index(rs[-1])] == Bs[-1]:
-                    if rs.index(rs[-1]) == 1:
-                        whole_decimal_repeating = True
-
-                    rs.pop(-1)
-                    Bs.pop(-1)
-                else:
-                    loop_start = rs.index(rs[-1])
-            else:
-                Bs[-1] = f"({Bs[-1]})"
+            for idx in range(len(ds) - 2, 0, -1):
+                if ds[idx] == d_i:
+                    loop_start = idx
+                    break
 
             break
 
         i += 1
 
     if k < l:
-        point_idx = 1
-
-        Bs.insert(point_idx, '.')
-        Bs.insert(0, 0)
+        Bs.insert(1, '.')
     else:
-        point_idx = 2 + k - l
-        Bs.insert(point_idx, '.')
+        Bs.insert(2 + k - l, '.')
+
+    if loop_start is not None:
+        if Bs.index('.') != len(Bs) - 2:
+            Bs.pop(-1)
+
+        Bs.insert(max(Bs.index('.') + 1, loop_start + 1), '(')
 
     base_str = ''.join(str(b) for b in Bs)
     integer, _, decimal = base_str.partition('.')
 
     if decimal == '0':
         return f"{minus_sign}{int(integer)}"
-    if whole_decimal_repeating:
-        return f"{minus_sign}{int(integer)}.({decimal})"
     if loop_start is not None:
-        declst = list(decimal)
-        declst.insert(loop_start, '(')
-
-        return f"{minus_sign}{int(integer)}.{''.join(declst)})"
+        return f"{minus_sign}{int(integer)}.{decimal})"
 
     return f"{minus_sign}{int(integer)}.{decimal}"
 
@@ -157,4 +148,25 @@ test = [
     , frac_to_dec(10, 3)
     , frac_to_dec(100, 3)
     , frac_to_dec(22, 7)
+    , frac_to_dec(420, 226)
 ]
+
+"""
+GRAVEYARD
+
+            if rs[-2] != rs[-1]:
+                if Bs[rs.index(rs[-1])] == Bs[-1]:
+                    if rs.index(rs[-1]) == 1:
+                        whole_decimal_repeating = True
+
+                    rs.pop(-1)
+                    Bs.pop(-1)
+                else:
+                    loop_start = rs.index(rs[-1])
+            else:
+                Bs[-1] = f"({Bs[-1]})"
+
+            break
+
+
+"""
