@@ -61,7 +61,7 @@ def valid_trianglev1(nums):
 
     return count
 
-def valid_triangle(nums):
+def valid_trianglev2(nums):
     if len(nums) < 3:
         return 0
 
@@ -80,6 +80,32 @@ def valid_triangle(nums):
                 ])
 
     return count
+
+import bisect
+
+def valid_triangle(nums):
+    """
+    Need to understand why just adding the index of the last
+    element smaller than the sum works
+    """
+    n = len(nums)
+
+    if n < 3:
+        return 0
+
+    count = 0
+    s = sorted(nums)
+
+    for i in range(n - 2):
+        for j in range(i + 1, n - 1):
+            currsum = s[i] + s[j]
+            ans = bisect.bisect_left(s, currsum)
+
+            if ans > j:
+                count += ans - j - 1
+
+    return count
+
 
 
 
