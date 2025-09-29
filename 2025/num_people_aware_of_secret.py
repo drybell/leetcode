@@ -72,7 +72,7 @@ from collections import deque
 
 MODULUS = 10**9 + 7
 
-class AwareQueue:
+class AwareQueueV1:
     """
     Maybe instead of holding every single person,
     we hold the count of how many people were added on the
@@ -107,45 +107,51 @@ def people_awarev1(n, delay, forget):
     if forget < delay:
         return 0
 
-    aware = AwareQueue(delay, forget)
+    aware = AwareQueueV1(delay, forget)
 
     for day in range(delay, n):
         aware.tick(day)
 
     return aware.size % MODULUS
 
+class AwareQueue:
+    def __init__(self, delay, forget):
+        self.q = deque([[1, delay - 1]])
+
+        self.delay = delay
+        self.forget = forget
+        self.size = 1
+
+    def tick(self, day):
+        while self.q[0][1] + 1 == self.forget:
+            forgot = self.q.popleft()
+            self.size -= 1
+
+        toadd = 0
+
+        for i in range(self.size):
+            self.q[i][1] += 1
+            if self.q[i][1] >= self.delay:
+                toadd += self.q[i][0]
+
+        self.q.append([toadd, 0])
+        self.size += 1
+
+    def aware(self):
+        return sum(
+            s[0] for s in self.q
+        )
 
 def people_aware(n, delay, forget):
-    #print()
-    if forget <= delay:
+    if forget < delay:
         return 0
 
-    aware = 1
-    able_to_share = 1
-    delayed = 0
-
-    gap = forget - delay
-    q = [1] * gap
-    forgot = [0, 1]
+    aware = AwareQueue(delay, forget)
 
     for day in range(delay, n):
-        if forgot[0]:
-            new = sum(forgot)
-            forgot[0] = forgot[1]
-            forgot[1] = new
-        if day == forget:
-            forgot[0] = 1
+        aware.tick(day)
 
-        q[0] = day - forgot[0]
-
-        print(f"pop time {day} {gap} {forgot}")
-        for i in range(1, len(q)):
-            q[i] = q[i - 1] * 2
-
-        print(q)
-
-    return q[-1] % MODULUS
-
+    return aware.aware() % MODULUS
 
 
 
@@ -180,6 +186,38 @@ def people_awarev1(n, delay, forget):
         print(i, aware, able_to_share)
 
     return aware
+
+def people_aware(n, delay, forget):
+    #print()
+    if forget <= delay:
+        return 0
+
+    aware = 1
+    able_to_share = 1
+    delayed = 0
+
+    gap = forget - delay
+    q = [1] * gap
+    forgot = [0, 1]
+
+    for day in range(delay, n):
+        if forgot[0]:
+            new = sum(forgot)
+            forgot[0] = forgot[1]
+            forgot[1] = new
+        if day == forget:
+            forgot[0] = 1
+
+        q[0] = day - forgot[0]
+
+        print(f"pop time {day} {gap} {forgot}")
+        for i in range(1, len(q)):
+            q[i] = q[i - 1] * 2
+
+        print(q)
+
+    return q[-1] % MODULUS
+
 
 
 """
