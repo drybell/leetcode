@@ -78,3 +78,34 @@ def executor(cls, ids, args):
         print()
 
     return results, m
+
+def debug_dp(y, x, dp):
+    print()
+
+    maxylen = max(map(lambda x: len(str(x)), y))
+
+    if isinstance(x, list) and isinstance(x[0], int):
+        print(''.rjust(maxylen + 5) + str(x))
+    elif isinstance(x, str):
+        print(''.rjust(maxylen + 5) + f"[{', '.join(list(x))}]")
+    else:
+        print(''.rjust(maxylen + 5) + f"[{', '.join(x)}]")
+
+    mat = []
+
+    for row in dp:
+        elems = []
+        for j, e in enumerate(row):
+            if j == 0:
+                elems.append('0')
+            else:
+                elems.append(str(e).rjust(len(str(x[j - 1]))))
+
+        mat.append('[' + ', '.join(elems) + ']')
+
+    match y:
+        case str():
+            y = list(y)
+
+    print('\n'.join(f"{str(i).rjust(maxylen + 1)} {l}" for i, l in zip([''] + y, mat)))
+
