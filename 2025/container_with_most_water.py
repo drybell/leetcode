@@ -265,10 +265,88 @@ def max_area3(height):
 
     return best_area
 
+import heapq
+
+def max_area(heights):
+    lenh = len(heights)
+
+    heap = []
+
+    for i, h in enumerate(heights):
+        heapq.heappush(heap, (-h, i))
+
+    maxes = []
+
+    firstn, firsti = heapq.heappop(heap)
+
+    while heap:
+        lastn, lasti = heapq.heappop(heap)
+
+        first, last = -firstn, -lastn
+        heapq.heappush(
+            maxes,
+            (-min(first, last), -abs(firsti - lasti))
+        )
+
+    return maxes
+    return -heapq.heappop(maxes)
+
+def max_area_solution_with_On_space(heights):
+    lenh = len(heights)
+
+    left = 0
+    right = lenh - 1
+
+    maxes = []
+
+    def area(l, r):
+        return (
+            min(heights[l], heights[r])
+            * abs(l - r)
+        )
+
+    while left < right:
+        a = area(left, right)
+        heapq.heappush(maxes, -a)
+
+        if heights[left] < heights[right]:
+            left += 1
+        else:
+            right -= 1
+
+    return -heapq.heappop(maxes)
+
+def max_area(heights):
+    lenh = len(heights)
+
+    left = 0
+    right = lenh - 1
+
+    maxes = -1
+
+    def area(l, r):
+        return (
+            min(heights[l], heights[r])
+            * abs(l - r)
+        )
+
+    while left < right:
+        maxes = max(maxes, area(left, right))
+
+        if heights[left] < heights[right]:
+            left += 1
+        else:
+            right -= 1
+
+    return maxes
+
+
+
+
 test = [
     max_area([1, 8, 6, 2, 5, 4, 8, 3, 7]) # 49
     , max_area([9, 11, 2, 2, 2, 2, 10, 11, 12])
-    , max_area([1, 1])
+    , max_area([1, 2, 1])
     , max_area([3, 6, 1])
     #, max_area([
     #    *list(range(0, 10000))
